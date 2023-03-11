@@ -1,83 +1,151 @@
-"""
-Software bajo la licencia Apache License 2.0,
-puedes obtener una copia en: http://www.apache.org/licenses/LICENSE-2.0.txt
-o en el fichero LICENSE
+"""Programa que permite calcular ruffini sencillamente"""
 
-Programa que permite descomponer en factores a un polinomio usando la regla de
-ruffini
-"""
-
-#Imports
-from util import *
-from sys import exit
-
-#Metodos
-def checkCoefs(coefs: list) -> None:
-    poly = toPolinomy(coefs)
-    if input(f"El polinomio deberia parecer de la siguiente forma: {poly}, es correcto? [y/n]").lower() in ["n", "no"]:
-        print("Saliendo...")
-        exit(1)
+#The exponent chars
+exp_arr = {"1":chr(185),
+        "2":chr(178),"3":chr(179),"4":chr(8308),
+        "5":chr(8309),"6":chr(8310),"7":chr(8311),
+        "8":chr(8312),"9":chr(8313),"0":chr(8304)}
 
 
-print("Calculadora de ruffini v1.0")
+class Polinomy():
+    "A polinomy, allows you to do some basic operations"
+    def __init__(self, termList:list):
+        "Default constructor"
+        self.coefs=termList
+        self.lastTerm=termList[-1]
 
-#Los coeficientes
-coefs_str = input("Introduzca los coeficientes > ")
-lst = coefs_str.split()
-coefs=[]
+    def __mod__(self, value:int ):
+        "Apply MOD: Polinomy%Val to check the synthetic div. result"
+        last=0
+        for i in self.coefs:
+            last=last*value + i
+        return last
 
-#Convertimos los coeficientes a numeros
-for i in lst:
-    coefs.append(int(i))
+    def __truediv__(self, value):
+        "Applies the div. assumes the polinomy can be divided by the given (x+value) binomy"
+        self.coefs.pop()
+        last=0
+        pos=0
+        for i in self.coefs:
+            last=last*value + i
+            self.coefs[pos]=last
+            pos+=1
+        self.lastTerm=self.coefs[-1]
+        return last
 
-checkCoefs(coefs)
+    def __len__(self):
+        "Apply len(Polinomy)"
+        return len(self.coefs)
 
-#Aplicatmos la regla de ruffini
-#Obtenemos los divisores del ultimo termino
-divs = divisors(coefs[-1])
+    def zeros(self):
+        "Get the right zeros"
+        count=0
+        for i in range(len(self)-1, -1, -1):
+            if self.coefs[i]!=0:
+                break
+            count+=1
+        return count
 
-#Verificamos cada una de las soluciones
-sols = []
 
-for i in divs:
-    lastV = coefs[0]
-    for j in range(1, len(coefs)):
-        lastV = lastV*i + coefs[j]
+def generateDivisors(term):
+    for i in range(1, term):
+        if term%i == 0:
+            yield -i
+            yield i
 
-    if lastV==0:
-        #Se cumple ruffini, entonces es una solucion
-        sols.append(i)
+    yield -term
+    yield term
 
-print()
 
-if len(sols)==0:
-    print("Parece no tener descomposicion :/ saliendo...")
-    exit(0)
+def exp(num):
+    "Convert a string num into an exponent num"
+    if type(num)==int:
+        if num==1:
+            return ""
+        num=str(num)
 
-print("Las soluciones del ruffini son:", sols)
-print("Y el polinomio descompuesto deberia quedar:")
+    bld=""
+    for i in num:
+        if i in exp_arr:
+            bld+=exp_arr[i]
+        else:
+            bld+=i
+    return bld
 
-result=""
-newcoefs = coefs.copy()
 
-for i in sols:
-    poly=toPolinomy([1,-i])
-    result=result+f"({poly})"
+def reprPolinomy(coefs, expon: int):
+    "Pretty-print of a polinomy"
+    if type(coefs) == int:
+        if coefs==0:
+            return "x"+exp(expon)
+        else:
+            if coefs>0:
+                return f"(x-{coefs})"+exp(expon)
+            else:
+                return f"(x+{abs(coefs)})"+exp(expon)
+    else:
+        bld="("
+        pos=0
+        deg=len(coefs)-1
+        for i in coefs:
+            if i==0:
+                continue
+            elif pos==deg:
+                if i>0:
+                    bld+="+"
+                bld+=f"{i}"
+            elif i==1:
+                bld+=f"x{exp(deg-pos)}"
+            elif i==-1:
+                bld+=f"-x{exp(deg-pos)}"
+            else:
+                if i>0:
+                    bld+="+"
+                bld+=f"{i}x{exp(deg-pos)}"
+            pos+=1
 
-    tmp=[]
-    lastV = 0
+        bld+=")"+exp(expon)
+        return bld
 
-    for j in newcoefs[:-1]:
-        tmp.append(lastV*i + j)
-        lastV=tmp[-1]
 
-    del(lastV)
-    del(newcoefs)
-    newcoefs=tmp.copy()
-    del(tmp)
+if __name__=="__main__":
+    line = input("Introduzca los coeficientes > ")
+    pol = Polinomy([ int(x) for x in line.split() ])
 
-if not len(newcoefs) in [0,1]:
-    last = toPolinomy(newcoefs)
-    result=result+f"({last})"
+    factors=[]
+    
+    for i in range(pol.zeros()):
+        pol/0
+        factors.append(0)
 
-print(result)
+    for i in generateDivisors(pol.lastTerm):
+        while(pol%i == 0):
+            pol/i
+            factors.append(i)
+
+        if len(pol) < 2:
+            break
+
+    #Print the factorized result
+    bld=""
+    count=0
+    last=-1
+    for i in factors:
+        if count==0:
+            last=i
+            count=1
+            continue
+        if last==i:
+            count+=1
+        else:
+            bld+=reprPolinomy(last, count)
+            count=1
+            last=i
+    if len(factors)>0:
+        bld+=reprPolinomy(last, count)
+
+    if len(pol)>=2:
+        bld+=reprPolinomy(pol.coefs, 1)
+
+    print(bld)
+
